@@ -11,26 +11,34 @@ export async function GET(
   const code =
     request.nextUrl.searchParams.get("code");
 
+  const state =
+    request.nextUrl.searchParams.get("state");
+
   if (!code) {
     return new NextResponse(
       "Authorization code is missing.",
-      {
-        status: 400,
-      }
+      { status: 400 }
     );
   }
 
+  if (!state) {
+    return new NextResponse(
+      "OAuth state is missing.",
+      { status: 400 }
+    );
+  }
+
+  // stateに対応するcode_verifierを取得
+  const cookieName =
+    `spotify_pkce_${state}`;
+
   const codeVerifier =
-    request.cookies.get(
-      "spotify_code_verifier"
-    )?.value;
+    request.cookies.get(cookieName)?.value;
 
   if (!codeVerifier) {
     return new NextResponse(
       "Code verifier is missing.",
-      {
-        status: 400,
-      }
+      { status: 400 }
     );
   }
 
@@ -46,38 +54,36 @@ export async function GET(
   if (!clientId) {
     return new NextResponse(
       "Spotify Client ID is not configured.",
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 
   if (!redirectUri) {
     return new NextResponse(
       "Spotify Redirect URI is not configured.",
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 
   if (!appUrl) {
     return new NextResponse(
       "App URL is not configured.",
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 
+  // SpotifyのAuthorization Codeを
+  // Access Token / Refresh Tokenへ交換
   const tokenResponse = await fetch(
     "https://accounts.spotify.com/api/token",
     {
       method: "POST",
+
       headers: {
         "Content-Type":
           "application/x-www-form-urlencoded",
       },
+
       body: new URLSearchParams({
         client_id: clientId,
         grant_type:
@@ -86,6 +92,8 @@ export async function GET(
         redirect_uri: redirectUri,
         code_verifier: codeVerifier,
       }),
+
+      cache: "no-store",
     }
   );
 
@@ -93,11 +101,14 @@ export async function GET(
     const errorText =
       await tokenResponse.text();
 
+    console.error(
+      "Spotify token exchange error:",
+      errorText
+    );
+
     return new NextResponse(
       `Token exchange failed: ${errorText}`,
-      {
-        status: 400,
-      }
+      { status: 400 }
     );
   }
 
@@ -113,12 +124,11 @@ export async function GET(
   if (!accessToken || !refreshToken) {
     return new NextResponse(
       "Spotify tokens were not returned.",
-      {
-        status: 400,
-      }
+      { status: 400 }
     );
   }
 
+  // Spotifyプロフィール取得
   const profileResponse = await fetch(
     "https://api.spotify.com/v1/me",
     {
@@ -126,6 +136,8 @@ export async function GET(
         Authorization:
           `Bearer ${accessToken}`,
       },
+
+      cache: "no-store",
     }
   );
 
@@ -135,20 +147,20 @@ export async function GET(
 
     return new NextResponse(
       `Profile request failed: ${errorText}`,
-      {
-        status: 400,
-      }
+      { status: 400 }
     );
   }
 
   const profile =
     await profileResponse.json();
 
+  // Access Tokenの期限
   const expiresAt = new Date(
     Date.now() +
       tokenData.expires_in * 1000
   ).toISOString();
 
+  // Supabaseへトークン保存
   const { error: tokenSaveError } =
     await supabaseAdmin
       .from("spotify_tokens")
@@ -156,12 +168,16 @@ export async function GET(
         {
           spotify_user_id:
             profile.id,
+
           access_token:
             accessToken,
+
           refresh_token:
             refreshToken,
+
           expires_at:
             expiresAt,
+
           updated_at:
             new Date().toISOString(),
         },
@@ -179,25 +195,27 @@ export async function GET(
 
     return new NextResponse(
       "Failed to save Spotify tokens.",
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 
+  // Dashboardへ
   const response =
     NextResponse.redirect(
       `${appUrl}/dashboard`
     );
 
+  // 使用済みPKCE Cookieを削除
+  response.cookies.delete(cookieName);
+
+  // Dashboard用Access Token
   response.cookies.set(
     "spotify_access_token",
     accessToken,
     {
       httpOnly: true,
       secure:
-        process.env.NODE_ENV ===
-        "production",
+        process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
       maxAge:

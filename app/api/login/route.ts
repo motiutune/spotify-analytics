@@ -8,21 +8,18 @@ export async function GET() {
   if (!clientId) {
     return new NextResponse(
       "Spotify Client ID is not configured.",
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 
   if (!redirectUri) {
     return new NextResponse(
       "Spotify Redirect URI is not configured.",
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 
+  // PKCE用
   const codeVerifier = crypto
     .randomBytes(64)
     .toString("base64url");
@@ -32,12 +29,21 @@ export async function GET() {
     .update(codeVerifier)
     .digest("base64url");
 
+  // ログイン試行を識別するstate
+  const state = crypto
+    .randomBytes(32)
+    .toString("base64url");
+
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: "code",
     redirect_uri: redirectUri,
+
     code_challenge_method: "S256",
     code_challenge: codeChallenge,
+
+    state,
+
     scope:
       "user-read-recently-played user-top-read",
   });
@@ -48,14 +54,14 @@ export async function GET() {
   const response =
     NextResponse.redirect(spotifyAuthUrl);
 
+  // stateごとに別Cookieへ保存
   response.cookies.set(
-    "spotify_code_verifier",
+    `spotify_pkce_${state}`,
     codeVerifier,
     {
       httpOnly: true,
       secure:
-        process.env.NODE_ENV ===
-        "production",
+        process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
       maxAge: 600,
