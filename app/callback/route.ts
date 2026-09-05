@@ -1,45 +1,87 @@
-import { NextRequest, NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-export async function GET(request: NextRequest) {
-  const code = request.nextUrl.searchParams.get("code");
+export async function GET(
+  request: NextRequest
+) {
+  const code =
+    request.nextUrl.searchParams.get("code");
 
   if (!code) {
-    return new NextResponse("Authorization code is missing.", {
-      status: 400,
-    });
+    return new NextResponse(
+      "Authorization code is missing.",
+      {
+        status: 400,
+      }
+    );
   }
 
-  const codeVerifier = request.cookies.get(
-    "spotify_code_verifier"
-  )?.value;
+  const codeVerifier =
+    request.cookies.get(
+      "spotify_code_verifier"
+    )?.value;
 
   if (!codeVerifier) {
-    return new NextResponse("Code verifier is missing.", {
-      status: 400,
-    });
+    return new NextResponse(
+      "Code verifier is missing.",
+      {
+        status: 400,
+      }
+    );
   }
 
-  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientId =
+    process.env.SPOTIFY_CLIENT_ID;
+
+  const redirectUri =
+    process.env.SPOTIFY_REDIRECT_URI;
+
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL;
 
   if (!clientId) {
-    return new NextResponse("Spotify Client ID is not configured.", {
-      status: 500,
-    });
+    return new NextResponse(
+      "Spotify Client ID is not configured.",
+      {
+        status: 500,
+      }
+    );
   }
 
-  const redirectUri = "http://127.0.0.1:3000/callback";
+  if (!redirectUri) {
+    return new NextResponse(
+      "Spotify Redirect URI is not configured.",
+      {
+        status: 500,
+      }
+    );
+  }
+
+  if (!appUrl) {
+    return new NextResponse(
+      "App URL is not configured.",
+      {
+        status: 500,
+      }
+    );
+  }
 
   const tokenResponse = await fetch(
     "https://accounts.spotify.com/api/token",
     {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type":
+          "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
         client_id: clientId,
-        grant_type: "authorization_code",
+        grant_type:
+          "authorization_code",
         code,
         redirect_uri: redirectUri,
         code_verifier: codeVerifier,
@@ -48,7 +90,8 @@ export async function GET(request: NextRequest) {
   );
 
   if (!tokenResponse.ok) {
-    const errorText = await tokenResponse.text();
+    const errorText =
+      await tokenResponse.text();
 
     return new NextResponse(
       `Token exchange failed: ${errorText}`,
@@ -58,10 +101,14 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const tokenData = await tokenResponse.json();
+  const tokenData =
+    await tokenResponse.json();
 
-  const accessToken = tokenData.access_token;
-  const refreshToken = tokenData.refresh_token;
+  const accessToken =
+    tokenData.access_token;
+
+  const refreshToken =
+    tokenData.refresh_token;
 
   if (!accessToken || !refreshToken) {
     return new NextResponse(
@@ -76,13 +123,15 @@ export async function GET(request: NextRequest) {
     "https://api.spotify.com/v1/me",
     {
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization:
+          `Bearer ${accessToken}`,
       },
     }
   );
 
   if (!profileResponse.ok) {
-    const errorText = await profileResponse.text();
+    const errorText =
+      await profileResponse.text();
 
     return new NextResponse(
       `Profile request failed: ${errorText}`,
@@ -92,26 +141,35 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const profile = await profileResponse.json();
+  const profile =
+    await profileResponse.json();
 
   const expiresAt = new Date(
-    Date.now() + tokenData.expires_in * 1000
+    Date.now() +
+      tokenData.expires_in * 1000
   ).toISOString();
 
-  const { error: tokenSaveError } = await supabaseAdmin
-    .from("spotify_tokens")
-    .upsert(
-      {
-        spotify_user_id: profile.id,
-        access_token: accessToken,
-        refresh_token: refreshToken,
-        expires_at: expiresAt,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "spotify_user_id",
-      }
-    );
+  const { error: tokenSaveError } =
+    await supabaseAdmin
+      .from("spotify_tokens")
+      .upsert(
+        {
+          spotify_user_id:
+            profile.id,
+          access_token:
+            accessToken,
+          refresh_token:
+            refreshToken,
+          expires_at:
+            expiresAt,
+          updated_at:
+            new Date().toISOString(),
+        },
+        {
+          onConflict:
+            "spotify_user_id",
+        }
+      );
 
   if (tokenSaveError) {
     console.error(
@@ -127,19 +185,25 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  console.log("Spotify tokenをSupabaseに保存しました");
+  const response =
+    NextResponse.redirect(
+      `${appUrl}/dashboard`
+    );
 
-  const response = NextResponse.redirect(
-    "http://127.0.0.1:3000/dashboard"
+  response.cookies.set(
+    "spotify_access_token",
+    accessToken,
+    {
+      httpOnly: true,
+      secure:
+        process.env.NODE_ENV ===
+        "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge:
+        tokenData.expires_in,
+    }
   );
-
-  response.cookies.set("spotify_access_token", accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: tokenData.expires_in,
-  });
 
   return response;
 }
