@@ -2,7 +2,10 @@ name: Spotify Sync
 
 on:
   schedule:
+    # 毎時17分に実行
     - cron: "17 * * * *"
+
+  # GitHub上から手動実行も可能
   workflow_dispatch:
 
 jobs:
@@ -10,8 +13,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Call Spotify sync API
+      - name: Sync Spotify history
         run: |
-          curl -f \
+          curl --fail \
+            --show-error \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ secrets.SPOTIFY_SYNC_URL }}"
