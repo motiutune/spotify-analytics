@@ -22,14 +22,14 @@ type ArtistRanking = {
   play_count: number;
 };
 
-type HourlyDistribution = {
-  hour: number;
-  play_count: number;
-};
-
 type TrackRanking = {
   track_name: string;
   artist_name: string;
+  play_count: number;
+};
+
+type HourlyDistribution = {
+  hour: number;
   play_count: number;
 };
 
@@ -38,18 +38,27 @@ type WeekdayDistribution = {
   play_count: number;
 };
 
+type Insights = {
+  topWeekday: string;
+  topHour: number;
+  topArtist: string;
+  topArtistShare: number;
+};
+
 export default function AnalyticsCharts({
   dailyCounts,
   artistRanking,
   trackRanking,
   hourlyDist,
   weekdayDist,
+  insights,
 }: {
   dailyCounts: DailyPlayCount[];
   artistRanking: ArtistRanking[];
   trackRanking: TrackRanking[];
   hourlyDist: HourlyDistribution[];
   weekdayDist: WeekdayDistribution[];
+  insights: Insights;
 }) {
   // -----------------------------
   // 日別データ
@@ -60,7 +69,6 @@ export default function AnalyticsCharts({
 
     return {
       ...item,
-
       display_date: `${date.getMonth() + 1}/${date.getDate()}`,
     };
   });
@@ -85,10 +93,83 @@ export default function AnalyticsCharts({
 
   return (
     <>
-      {/* 日別再生数 */}
+      {/* -----------------------------
+          Listening Insights
+      ----------------------------- */}
 
       <section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+        <div className="mb-6">
+          <p className="text-sm font-medium text-green-400">
+            LISTENING INSIGHTS
+          </p>
 
+          <h2 className="mt-1 text-xl font-bold text-white">
+            あなたの再生傾向
+          </h2>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+
+          {/* よく聴く曜日 */}
+
+          <div className="rounded-2xl bg-white/[0.04] p-5">
+            <p className="text-sm text-zinc-500">
+              最もよく聴く曜日
+            </p>
+
+            <p className="mt-2 text-3xl font-bold text-white">
+              {insights.topWeekday}曜日
+            </p>
+
+            <p className="mt-2 text-sm text-zinc-400">
+              この曜日に最も多く音楽を再生しています
+            </p>
+          </div>
+
+          {/* よく聴く時間 */}
+
+          <div className="rounded-2xl bg-white/[0.04] p-5">
+            <p className="text-sm text-zinc-500">
+              最もよく聴く時間帯
+            </p>
+
+            <p className="mt-2 text-3xl font-bold text-white">
+              {insights.topHour}時台
+            </p>
+
+            <p className="mt-2 text-sm text-zinc-400">
+              この時間帯が再生のピークです
+            </p>
+          </div>
+
+          {/* Top Artist比率 */}
+
+          <div className="rounded-2xl bg-white/[0.04] p-5">
+            <p className="text-sm text-zinc-500">
+              Top Artist比率
+            </p>
+
+            <p className="mt-2 truncate text-2xl font-bold text-white">
+              {insights.topArtist}
+            </p>
+
+            <p className="mt-1 text-3xl font-bold text-green-400">
+              {insights.topArtistShare}%
+            </p>
+
+            <p className="mt-2 text-sm text-zinc-400">
+              全再生に占める割合
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      {/* -----------------------------
+          日別再生数
+      ----------------------------- */}
+
+      <section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <div className="mb-6">
           <p className="text-sm font-medium text-green-400">
             DAILY ACTIVITY
@@ -100,15 +181,11 @@ export default function AnalyticsCharts({
         </div>
 
         <div className="h-72">
-
           <ResponsiveContainer
             width="100%"
             height="100%"
           >
-            <LineChart
-              data={dailyChartData}
-            >
-
+            <LineChart data={dailyChartData}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="#3f3f46"
@@ -131,8 +208,7 @@ export default function AnalyticsCharts({
               <Tooltip
                 contentStyle={{
                   background: "#18181b",
-                  border:
-                    "1px solid #3f3f46",
+                  border: "1px solid #3f3f46",
                   borderRadius: "12px",
                 }}
                 labelStyle={{
@@ -156,18 +232,16 @@ export default function AnalyticsCharts({
                   r: 6,
                 }}
               />
-
             </LineChart>
           </ResponsiveContainer>
-
         </div>
-
       </section>
 
-      {/* Artist Ranking */}
+      {/* -----------------------------
+          Artist Ranking
+      ----------------------------- */}
 
       <section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-
         <div className="mb-6">
           <p className="text-sm font-medium text-green-400">
             TOP ARTISTS
@@ -179,22 +253,17 @@ export default function AnalyticsCharts({
         </div>
 
         <div className="h-96">
-
           <ResponsiveContainer
             width="100%"
             height="100%"
           >
             <BarChart
-              data={artistRanking.slice(
-                0,
-                10
-              )}
+              data={artistRanking.slice(0, 10)}
               layout="vertical"
               margin={{
                 left: 20,
               }}
             >
-
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="#3f3f46"
@@ -220,8 +289,7 @@ export default function AnalyticsCharts({
               <Tooltip
                 contentStyle={{
                   background: "#18181b",
-                  border:
-                    "1px solid #3f3f46",
+                  border: "1px solid #3f3f46",
                   borderRadius: "12px",
                 }}
                 formatter={(value) => [
@@ -233,140 +301,129 @@ export default function AnalyticsCharts({
               <Bar
                 dataKey="play_count"
                 fill="#22c55e"
-                radius={[
-                  0,
-                  6,
-                  6,
-                  0,
+                radius={[0, 6, 6, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
+
+      {/* -----------------------------
+          Track Ranking
+      ----------------------------- */}
+
+      <section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+        <div className="mb-6">
+          <p className="text-sm font-medium text-green-400">
+            TOP TRACKS
+          </p>
+
+          <h2 className="mt-1 text-xl font-bold text-white">
+            曲ランキング
+          </h2>
+        </div>
+
+        <div className="space-y-2">
+          {trackRanking.map((track, index) => (
+            <div
+              key={`${track.track_name}-${track.artist_name}`}
+              className="flex items-center gap-4 rounded-2xl p-3 transition hover:bg-white/[0.04]"
+            >
+              <span className="w-8 text-center text-sm font-bold text-zinc-500">
+                {index + 1}
+              </span>
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-white">
+                  {track.track_name}
+                </p>
+
+                <p className="truncate text-sm text-zinc-500">
+                  {track.artist_name}
+                </p>
+              </div>
+
+              <div className="text-right">
+                <span className="text-lg font-bold text-green-400">
+                  {track.play_count}
+                </span>
+
+                <span className="ml-1 text-sm text-zinc-500">
+                  回
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* -----------------------------
+          曜日別再生数
+      ----------------------------- */}
+
+      <section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+        <div className="mb-6">
+          <p className="text-sm font-medium text-green-400">
+            WEEKLY PATTERN
+          </p>
+
+          <h2 className="mt-1 text-xl font-bold text-white">
+            曜日別再生数
+          </h2>
+        </div>
+
+        <div className="h-72">
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+          >
+            <BarChart data={weekdayDist}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#3f3f46"
+              />
+
+              <XAxis
+                dataKey="weekday"
+                stroke="#a1a1aa"
+                fontSize={12}
+                tickLine={false}
+              />
+
+              <YAxis
+                stroke="#a1a1aa"
+                fontSize={12}
+                allowDecimals={false}
+                tickLine={false}
+              />
+
+              <Tooltip
+                contentStyle={{
+                  background: "#18181b",
+                  border: "1px solid #3f3f46",
+                  borderRadius: "12px",
+                }}
+                formatter={(value) => [
+                  `${value}回`,
+                  "再生数",
                 ]}
               />
 
+              <Bar
+                dataKey="play_count"
+                fill="#22c55e"
+                radius={[5, 5, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
-
         </div>
-
       </section>
 
-      {/* Track Ranking */}
-
-<section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-
-  <div className="mb-6">
-    <p className="text-sm font-medium text-green-400">
-      TOP TRACKS
-    </p>
-
-    <h2 className="mt-1 text-xl font-bold text-white">
-      曲ランキング
-    </h2>
-  </div>
-
-  <div className="space-y-2">
-
-    {trackRanking.map((track, index) => (
-      <div
-        key={`${track.track_name}-${track.artist_name}`}
-        className="flex items-center gap-4 rounded-2xl p-3 transition hover:bg-white/[0.04]"
-      >
-        <span className="w-8 text-center text-sm font-bold text-zinc-500">
-          {index + 1}
-        </span>
-
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-white">
-            {track.track_name}
-          </p>
-
-          <p className="truncate text-sm text-zinc-500">
-            {track.artist_name}
-          </p>
-        </div>
-
-        <div className="text-right">
-          <span className="text-lg font-bold text-green-400">
-            {track.play_count}
-          </span>
-
-          <span className="ml-1 text-sm text-zinc-500">
-            回
-          </span>
-        </div>
-      </div>
-    ))}
-
-  </div>
-
-</section>
-
-{/* 曜日別再生数 */}
-
-<section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-
-  <div className="mb-6">
-    <p className="text-sm font-medium text-green-400">
-      WEEKLY PATTERN
-    </p>
-
-    <h2 className="mt-1 text-xl font-bold text-white">
-      曜日別再生数
-    </h2>
-  </div>
-
-  <div className="h-72">
-    <ResponsiveContainer
-      width="100%"
-      height="100%"
-    >
-      <BarChart data={weekdayDist}>
-
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="#3f3f46"
-        />
-
-        <XAxis
-          dataKey="weekday"
-          stroke="#a1a1aa"
-          fontSize={12}
-          tickLine={false}
-        />
-
-        <YAxis
-          stroke="#a1a1aa"
-          fontSize={12}
-          allowDecimals={false}
-          tickLine={false}
-        />
-
-        <Tooltip
-          contentStyle={{
-            background: "#18181b",
-            border: "1px solid #3f3f46",
-            borderRadius: "12px",
-          }}
-          formatter={(value) => [
-            `${value}回`,
-            "再生数",
-          ]}
-        />
-
-        <Bar
-          dataKey="play_count"
-          fill="#22c55e"
-          radius={[5, 5, 0, 0]}
-        />
-
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
-
-</section>
-
-      {/* 時間帯分析 */}
+      {/* -----------------------------
+          時間帯分析
+      ----------------------------- */}
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-
         <div className="mb-6">
           <p className="text-sm font-medium text-green-400">
             LISTENING TIME
@@ -378,15 +435,11 @@ export default function AnalyticsCharts({
         </div>
 
         <div className="h-72">
-
           <ResponsiveContainer
             width="100%"
             height="100%"
           >
-            <BarChart
-              data={hourlyChartData}
-            >
-
+            <BarChart data={hourlyChartData}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="#3f3f46"
@@ -410,8 +463,7 @@ export default function AnalyticsCharts({
               <Tooltip
                 contentStyle={{
                   background: "#18181b",
-                  border:
-                    "1px solid #3f3f46",
+                  border: "1px solid #3f3f46",
                   borderRadius: "12px",
                 }}
                 formatter={(value) => [
@@ -423,19 +475,11 @@ export default function AnalyticsCharts({
               <Bar
                 dataKey="play_count"
                 fill="#22c55e"
-                radius={[
-                  5,
-                  5,
-                  0,
-                  0,
-                ]}
+                radius={[5, 5, 0, 0]}
               />
-
             </BarChart>
           </ResponsiveContainer>
-
         </div>
-
       </section>
     </>
   );

@@ -149,18 +149,20 @@ export default async function AnalyticsPage({
     );
   }
 
+  const hourlyDist = Array.from(
+    { length: 24 },
+    (_, hour) => ({
+      hour,
+      play_count:
+        hourlyMap.get(hour) ?? 0,
+    })
+  );
+
   // -----------------------------
-// 曜日別再生数
-// -----------------------------
+  // 曜日別再生数
+  // -----------------------------
 
-const weekdayMap = new Map<number, number>();
-
-for (const item of history) {
-  // 日本時間で曜日を取得
-  const weekdayText = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Tokyo",
-    weekday: "short",
-  }).format(new Date(item.played_at));
+  const weekdayMap = new Map<number, number>();
 
   const weekdayIndexMap: Record<string, number> = {
     Mon: 0,
@@ -172,35 +174,35 @@ for (const item of history) {
     Sun: 6,
   };
 
-  const weekday = weekdayIndexMap[weekdayText];
+  for (const item of history) {
+    const weekdayText =
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Tokyo",
+        weekday: "short",
+      }).format(new Date(item.played_at));
 
-  weekdayMap.set(
+    const weekday =
+      weekdayIndexMap[weekdayText];
+
+    weekdayMap.set(
+      weekday,
+      (weekdayMap.get(weekday) ?? 0) + 1
+    );
+  }
+
+  const weekdayDist = [
+    "月",
+    "火",
+    "水",
+    "木",
+    "金",
+    "土",
+    "日",
+  ].map((weekday, index) => ({
     weekday,
-    (weekdayMap.get(weekday) ?? 0) + 1
-  );
-}
-
-const weekdayDist = [
-  "月",
-  "火",
-  "水",
-  "木",
-  "金",
-  "土",
-  "日",
-].map((weekday, index) => ({
-  weekday,
-  play_count: weekdayMap.get(index) ?? 0,
-}));
-
-  const hourlyDist = Array.from(
-    { length: 24 },
-    (_, hour) => ({
-      hour,
-      play_count:
-        hourlyMap.get(hour) ?? 0,
-    })
-  );
+    play_count:
+      weekdayMap.get(index) ?? 0,
+  }));
 
   // -----------------------------
   // 統計カード
@@ -215,6 +217,44 @@ const weekdayDist = [
 
   const topTrack =
     trackRanking[0]?.track_name ?? "-";
+
+  // -----------------------------
+  // Listening Insights
+  // -----------------------------
+
+  const topWeekday =
+    weekdayDist.length > 0
+      ? weekdayDist.reduce(
+          (max, current) =>
+            current.play_count >
+            max.play_count
+              ? current
+              : max
+        )
+      : null;
+
+  const topHour =
+    hourlyDist.length > 0
+      ? hourlyDist.reduce(
+          (max, current) =>
+            current.play_count >
+            max.play_count
+              ? current
+              : max
+        )
+      : null;
+
+  const topArtistCount =
+    artistRanking[0]?.play_count ?? 0;
+
+  const topArtistShare =
+    history.length > 0
+      ? Math.round(
+          (topArtistCount /
+            history.length) *
+            100
+        )
+      : 0;
 
   // -----------------------------
   // 画面
@@ -346,15 +386,23 @@ const weekdayDist = [
 
         </section>
 
-        {/* Charts */}
+        {/* Charts + Insights */}
 
         <AnalyticsCharts
-      dailyCounts={dailyCounts}
-      artistRanking={artistRanking}
-      trackRanking={trackRanking}
-      hourlyDist={hourlyDist}
-      weekdayDist={weekdayDist}
-      />
+          dailyCounts={dailyCounts}
+          artistRanking={artistRanking}
+          trackRanking={trackRanking}
+          hourlyDist={hourlyDist}
+          weekdayDist={weekdayDist}
+          insights={{
+            topWeekday:
+              topWeekday?.weekday ?? "-",
+            topHour:
+              topHour?.hour ?? 0,
+            topArtist,
+            topArtistShare,
+          }}
+        />
 
       </div>
     </main>
