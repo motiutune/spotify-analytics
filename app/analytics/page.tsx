@@ -25,7 +25,10 @@ export default async function AnalyticsPage({
       ? rawPeriod
       : "30";
 
+  // -----------------------------
   // 選択期間の履歴取得
+  // -----------------------------
+
   const history = await getHistoryByPeriod(period);
 
   // -----------------------------
@@ -37,7 +40,9 @@ export default async function AnalyticsPage({
   for (const item of history) {
     const date = new Date(
       item.played_at
-    ).toLocaleDateString("ja-JP");
+    ).toLocaleDateString("ja-JP", {
+      timeZone: "Asia/Tokyo",
+    });
 
     dailyMap.set(
       date,
@@ -86,42 +91,42 @@ export default async function AnalyticsPage({
     .slice(0, 10);
 
   // -----------------------------
-// 曲別再生数
-// -----------------------------
+  // 曲別再生数
+  // -----------------------------
 
-const trackMap = new Map<
-  string,
-  {
-    track_name: string;
-    artist_name: string;
-    play_count: number;
+  const trackMap = new Map<
+    string,
+    {
+      track_name: string;
+      artist_name: string;
+      play_count: number;
+    }
+  >();
+
+  for (const item of history) {
+    const key = item.track_id;
+
+    const existing = trackMap.get(key);
+
+    if (existing) {
+      existing.play_count += 1;
+    } else {
+      trackMap.set(key, {
+        track_name: item.track_name,
+        artist_name: item.artist_name,
+        play_count: 1,
+      });
+    }
   }
->();
 
-for (const item of history) {
-  const key = item.track_id;
-
-  const existing = trackMap.get(key);
-
-  if (existing) {
-    existing.play_count += 1;
-  } else {
-    trackMap.set(key, {
-      track_name: item.track_name,
-      artist_name: item.artist_name,
-      play_count: 1,
-    });
-  }
-}
-
-const trackRanking = Array.from(
-  trackMap.values()
-)
-  .sort(
-    (a, b) =>
-      b.play_count - a.play_count
+  const trackRanking = Array.from(
+    trackMap.values()
   )
-  .slice(0, 10);
+    .sort(
+      (a, b) =>
+        b.play_count - a.play_count
+    )
+    .slice(0, 10);
 
   // -----------------------------
   // 時間帯別再生数
@@ -130,9 +135,13 @@ const trackRanking = Array.from(
   const hourlyMap = new Map<number, number>();
 
   for (const item of history) {
-    const hour = new Date(
-      item.played_at
-    ).getHours();
+    const hour = Number(
+      new Intl.DateTimeFormat("ja-JP", {
+        timeZone: "Asia/Tokyo",
+        hour: "2-digit",
+        hour12: false,
+      }).format(new Date(item.played_at))
+    );
 
     hourlyMap.set(
       hour,
@@ -149,9 +158,29 @@ const trackRanking = Array.from(
     })
   );
 
+  // -----------------------------
+  // 統計カード
+  // -----------------------------
+
+  const uniqueTrackCount = new Set(
+    history.map((item) => item.track_id)
+  ).size;
+
+  const topArtist =
+    artistRanking[0]?.artist_name ?? "-";
+
+  const topTrack =
+    trackRanking[0]?.track_name ?? "-";
+
+  // -----------------------------
+  // 画面
+  // -----------------------------
+
   return (
     <main className="min-h-screen bg-zinc-950 text-white p-6">
       <div className="mx-auto max-w-5xl">
+
+        {/* Header */}
 
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -211,27 +240,75 @@ const trackRanking = Array.from(
 
         </div>
 
-        {/* 総再生数 */}
+        {/* 統計カード */}
 
-        <div className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-          <p className="text-sm text-zinc-500">
-            TOTAL PLAYS
-          </p>
+        <section className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
-          <p className="mt-2 text-4xl font-bold">
-            {history.length}
-          </p>
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+            <p className="text-sm text-zinc-500">
+              TOTAL PLAYS
+            </p>
 
-          <p className="mt-1 text-sm text-zinc-500">
-            選択期間の再生数
-          </p>
-        </div>
+            <p className="mt-2 text-4xl font-bold">
+              {history.length}
+            </p>
+
+            <p className="mt-1 text-sm text-zinc-500">
+              選択期間の再生数
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+            <p className="text-sm text-zinc-500">
+              UNIQUE TRACKS
+            </p>
+
+            <p className="mt-2 text-4xl font-bold">
+              {uniqueTrackCount}
+            </p>
+
+            <p className="mt-1 text-sm text-zinc-500">
+              聴いた曲の種類
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+            <p className="text-sm text-zinc-500">
+              TOP ARTIST
+            </p>
+
+            <p className="mt-2 truncate text-2xl font-bold">
+              {topArtist}
+            </p>
+
+            <p className="mt-1 text-sm text-zinc-500">
+              最も多く聴いたアーティスト
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+            <p className="text-sm text-zinc-500">
+              TOP TRACK
+            </p>
+
+            <p className="mt-2 truncate text-2xl font-bold">
+              {topTrack}
+            </p>
+
+            <p className="mt-1 text-sm text-zinc-500">
+              最も多く聴いた曲
+            </p>
+          </div>
+
+        </section>
+
+        {/* Charts */}
 
         <AnalyticsCharts
-        dailyCounts={dailyCounts}
-        artistRanking={artistRanking}
-        trackRanking={trackRanking}
-        hourlyDist={hourlyDist}
+          dailyCounts={dailyCounts}
+          artistRanking={artistRanking}
+          trackRanking={trackRanking}
+          hourlyDist={hourlyDist}
         />
 
       </div>
