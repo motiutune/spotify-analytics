@@ -33,16 +33,23 @@ type TrackRanking = {
   play_count: number;
 };
 
+type WeekdayDistribution = {
+  weekday: string;
+  play_count: number;
+};
+
 export default function AnalyticsCharts({
   dailyCounts,
   artistRanking,
   trackRanking,
   hourlyDist,
+  weekdayDist,
 }: {
   dailyCounts: DailyPlayCount[];
   artistRanking: ArtistRanking[];
   trackRanking: TrackRanking[];
   hourlyDist: HourlyDistribution[];
+  weekdayDist: WeekdayDistribution[];
 }) {
   // -----------------------------
   // 日別データ
@@ -288,6 +295,70 @@ export default function AnalyticsCharts({
       </div>
     ))}
 
+  </div>
+
+</section>
+
+{/* 曜日別再生数 */}
+
+<section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+
+  <div className="mb-6">
+    <p className="text-sm font-medium text-green-400">
+      WEEKLY PATTERN
+    </p>
+
+    <h2 className="mt-1 text-xl font-bold text-white">
+      曜日別再生数
+    </h2>
+  </div>
+
+  <div className="h-72">
+    <ResponsiveContainer
+      width="100%"
+      height="100%"
+    >
+      <BarChart data={weekdayDist}>
+
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke="#3f3f46"
+        />
+
+        <XAxis
+          dataKey="weekday"
+          stroke="#a1a1aa"
+          fontSize={12}
+          tickLine={false}
+        />
+
+        <YAxis
+          stroke="#a1a1aa"
+          fontSize={12}
+          allowDecimals={false}
+          tickLine={false}
+        />
+
+        <Tooltip
+          contentStyle={{
+            background: "#18181b",
+            border: "1px solid #3f3f46",
+            borderRadius: "12px",
+          }}
+          formatter={(value) => [
+            `${value}回`,
+            "再生数",
+          ]}
+        />
+
+        <Bar
+          dataKey="play_count"
+          fill="#22c55e"
+          radius={[5, 5, 0, 0]}
+        />
+
+      </BarChart>
+    </ResponsiveContainer>
   </div>
 
 </section>

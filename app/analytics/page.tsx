@@ -149,6 +149,50 @@ export default async function AnalyticsPage({
     );
   }
 
+  // -----------------------------
+// 曜日別再生数
+// -----------------------------
+
+const weekdayMap = new Map<number, number>();
+
+for (const item of history) {
+  // 日本時間で曜日を取得
+  const weekdayText = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Tokyo",
+    weekday: "short",
+  }).format(new Date(item.played_at));
+
+  const weekdayIndexMap: Record<string, number> = {
+    Mon: 0,
+    Tue: 1,
+    Wed: 2,
+    Thu: 3,
+    Fri: 4,
+    Sat: 5,
+    Sun: 6,
+  };
+
+  const weekday = weekdayIndexMap[weekdayText];
+
+  weekdayMap.set(
+    weekday,
+    (weekdayMap.get(weekday) ?? 0) + 1
+  );
+}
+
+const weekdayDist = [
+  "月",
+  "火",
+  "水",
+  "木",
+  "金",
+  "土",
+  "日",
+].map((weekday, index) => ({
+  weekday,
+  play_count: weekdayMap.get(index) ?? 0,
+}));
+
   const hourlyDist = Array.from(
     { length: 24 },
     (_, hour) => ({
@@ -305,11 +349,12 @@ export default async function AnalyticsPage({
         {/* Charts */}
 
         <AnalyticsCharts
-          dailyCounts={dailyCounts}
-          artistRanking={artistRanking}
-          trackRanking={trackRanking}
-          hourlyDist={hourlyDist}
-        />
+      dailyCounts={dailyCounts}
+      artistRanking={artistRanking}
+      trackRanking={trackRanking}
+      hourlyDist={hourlyDist}
+      weekdayDist={weekdayDist}
+      />
 
       </div>
     </main>
