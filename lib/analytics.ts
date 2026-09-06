@@ -1,46 +1,48 @@
 import { supabase } from "@/lib/supabase";
 
-export type DailyPlayCount = {
-  play_date: string;
-  play_count: number;
-};
-
-export type ArtistRanking = {
+export type HistoryRow = {
+  track_id: string;
+  track_name: string;
   artist_name: string;
-  play_count: number;
-  last_played_at: string;
+  album_name: string;
+  album_image_url: string | null;
+  played_at: string;
 };
 
-export type HourlyDistribution = {
-  hour: number;
-  play_count: number;
-};
+export type Period = "7" | "30" | "all";
 
-export async function getDailyPlayCounts(limit = 30) {
-  const { data, error } = await supabase
-    .from("daily_play_counts")
-    .select("*")
-    .limit(limit);
+export async function getHistoryByPeriod(
+  period: Period
+): Promise<HistoryRow[]> {
+  let query = supabase
+    .from("spotify_history")
+    .select(
+      "track_id, track_name, artist_name, album_name, album_image_url, played_at"
+    )
+    .order("played_at", {
+      ascending: true,
+    });
 
-  if (error) throw error;
-  return data as DailyPlayCount[];
-}
+  if (period !== "all") {
+    const days = Number(period);
 
-export async function getArtistRanking(limit = 10) {
-  const { data, error } = await supabase
-    .from("artist_ranking")
-    .select("*")
-    .limit(limit);
+    const startDate = new Date();
 
-  if (error) throw error;
-  return data as ArtistRanking[];
-}
+    startDate.setDate(
+      startDate.getDate() - days
+    );
 
-export async function getHourlyDistribution() {
-  const { data, error } = await supabase
-    .from("hourly_distribution")
-    .select("*");
+    query = query.gte(
+      "played_at",
+      startDate.toISOString()
+    );
+  }
 
-  if (error) throw error;
-  return data as HourlyDistribution[];
+  const { data, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as HistoryRow[];
 }
