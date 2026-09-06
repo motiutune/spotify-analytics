@@ -134,20 +134,30 @@ export default async function AnalyticsPage({
 
   const hourlyMap = new Map<number, number>();
 
-  for (const item of history) {
-    const hour = Number(
-      new Intl.DateTimeFormat("ja-JP", {
-        timeZone: "Asia/Tokyo",
-        hour: "2-digit",
-        hour12: false,
-      }).format(new Date(item.played_at))
-    );
+for (const item of history) {
+  const date = new Date(item.played_at);
 
-    hourlyMap.set(
-      hour,
-      (hourlyMap.get(hour) ?? 0) + 1
-    );
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Tokyo",
+    hour: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  const hourPart = parts.find(
+    (part) => part.type === "hour"
+  );
+
+  if (!hourPart) {
+    continue;
   }
+
+  const hour = Number(hourPart.value);
+
+  hourlyMap.set(
+    hour,
+    (hourlyMap.get(hour) ?? 0) + 1
+  );
+}
 
   const hourlyDist = Array.from(
     { length: 24 },
