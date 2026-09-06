@@ -86,6 +86,44 @@ export default async function AnalyticsPage({
     .slice(0, 10);
 
   // -----------------------------
+// 曲別再生数
+// -----------------------------
+
+const trackMap = new Map<
+  string,
+  {
+    track_name: string;
+    artist_name: string;
+    play_count: number;
+  }
+>();
+
+for (const item of history) {
+  const key = item.track_id;
+
+  const existing = trackMap.get(key);
+
+  if (existing) {
+    existing.play_count += 1;
+  } else {
+    trackMap.set(key, {
+      track_name: item.track_name,
+      artist_name: item.artist_name,
+      play_count: 1,
+    });
+  }
+}
+
+const trackRanking = Array.from(
+  trackMap.values()
+)
+  .sort(
+    (a, b) =>
+      b.play_count - a.play_count
+  )
+  .slice(0, 10);
+
+  // -----------------------------
   // 時間帯別再生数
   // -----------------------------
 
@@ -190,9 +228,10 @@ export default async function AnalyticsPage({
         </div>
 
         <AnalyticsCharts
-          dailyCounts={dailyCounts}
-          artistRanking={artistRanking}
-          hourlyDist={hourlyDist}
+        dailyCounts={dailyCounts}
+        artistRanking={artistRanking}
+        trackRanking={trackRanking}
+        hourlyDist={hourlyDist}
         />
 
       </div>
