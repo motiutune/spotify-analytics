@@ -1,3 +1,5 @@
+"use client";
+
 import {
   BarChart,
   Bar,
@@ -60,10 +62,6 @@ export default function AnalyticsCharts({
   weekdayDist: WeekdayDistribution[];
   insights: Insights;
 }) {
-  // -----------------------------
-  // 日別データ
-  // -----------------------------
-
   const dailyChartData = dailyCounts.map((item) => {
     const date = new Date(item.play_date);
 
@@ -72,10 +70,6 @@ export default function AnalyticsCharts({
       display_date: `${date.getMonth() + 1}/${date.getDate()}`,
     };
   });
-
-  // -----------------------------
-  // 時間帯データ
-  // -----------------------------
 
   const hourlyChartData = Array.from(
     { length: 24 },
@@ -107,8 +101,6 @@ export default function AnalyticsCharts({
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          {/* よく聴く曜日 */}
-
           <div className="rounded-2xl bg-white/[0.04] p-5">
             <p className="text-sm text-zinc-500">
               最もよく聴く曜日
@@ -123,8 +115,6 @@ export default function AnalyticsCharts({
             </p>
           </div>
 
-          {/* よく聴く時間帯 */}
-
           <div className="rounded-2xl bg-white/[0.04] p-5">
             <p className="text-sm text-zinc-500">
               最もよく聴く時間帯
@@ -138,8 +128,6 @@ export default function AnalyticsCharts({
               この時間帯が再生のピークです
             </p>
           </div>
-
-          {/* Top Artist比率 */}
 
           <div className="rounded-2xl bg-white/[0.04] p-5">
             <p className="text-sm text-zinc-500">
@@ -159,8 +147,6 @@ export default function AnalyticsCharts({
             </p>
           </div>
 
-          {/* 再生スタイル */}
-
           <div className="rounded-2xl bg-white/[0.04] p-5">
             <p className="text-sm text-zinc-500">
               再生スタイル
@@ -174,8 +160,6 @@ export default function AnalyticsCharts({
               再生時間帯から判定
             </p>
           </div>
-
-          {/* 休日再生割合 */}
 
           <div className="rounded-2xl bg-white/[0.04] p-5">
             <p className="text-sm text-zinc-500">
@@ -274,9 +258,7 @@ export default function AnalyticsCharts({
             <BarChart
               data={artistRanking.slice(0, 10)}
               layout="vertical"
-              margin={{
-                left: 20,
-              }}
+              margin={{ left: 20 }}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
