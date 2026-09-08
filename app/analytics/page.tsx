@@ -134,30 +134,33 @@ export default async function AnalyticsPage({
 
   const hourlyMap = new Map<number, number>();
 
-for (const item of history) {
-  const date = new Date(item.played_at);
+  for (const item of history) {
+    const date = new Date(item.played_at);
 
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Tokyo",
-    hour: "numeric",
-    hourCycle: "h23",
-  }).formatToParts(date);
+    const parts = new Intl.DateTimeFormat(
+      "en-US",
+      {
+        timeZone: "Asia/Tokyo",
+        hour: "numeric",
+        hourCycle: "h23",
+      }
+    ).formatToParts(date);
 
-  const hourPart = parts.find(
-    (part) => part.type === "hour"
-  );
+    const hourPart = parts.find(
+      (part) => part.type === "hour"
+    );
 
-  if (!hourPart) {
-    continue;
+    if (!hourPart) {
+      continue;
+    }
+
+    const hour = Number(hourPart.value);
+
+    hourlyMap.set(
+      hour,
+      (hourlyMap.get(hour) ?? 0) + 1
+    );
   }
-
-  const hour = Number(hourPart.value);
-
-  hourlyMap.set(
-    hour,
-    (hourlyMap.get(hour) ?? 0) + 1
-  );
-}
 
   const hourlyDist = Array.from(
     { length: 24 },
@@ -174,7 +177,10 @@ for (const item of history) {
 
   const weekdayMap = new Map<number, number>();
 
-  const weekdayIndexMap: Record<string, number> = {
+  const weekdayIndexMap: Record<
+    string,
+    number
+  > = {
     Mon: 0,
     Tue: 1,
     Wed: 2,
@@ -261,6 +267,70 @@ for (const item of history) {
     history.length > 0
       ? Math.round(
           (topArtistCount /
+            history.length) *
+            100
+        )
+      : 0;
+
+  // -----------------------------
+  // 昼型 / 夜型
+  // -----------------------------
+
+  const daytimePlays = hourlyDist
+    .filter(
+      (item) =>
+        item.hour >= 6 &&
+        item.hour < 18
+    )
+    .reduce(
+      (sum, item) =>
+        sum + item.play_count,
+      0
+    );
+
+  const nighttimePlays = hourlyDist
+    .filter(
+      (item) =>
+        item.hour < 6 ||
+        item.hour >= 18
+    )
+    .reduce(
+      (sum, item) =>
+        sum + item.play_count,
+      0
+    );
+
+  const listeningStyle =
+    daytimePlays > nighttimePlays
+      ? "昼型"
+      : nighttimePlays > daytimePlays
+        ? "夜型"
+        : "バランス型";
+
+  // -----------------------------
+  // 平日 / 休日
+  // -----------------------------
+
+  const weekdayPlays = weekdayDist
+    .slice(0, 5)
+    .reduce(
+      (sum, item) =>
+        sum + item.play_count,
+      0
+    );
+
+  const weekendPlays = weekdayDist
+    .slice(5, 7)
+    .reduce(
+      (sum, item) =>
+        sum + item.play_count,
+      0
+    );
+
+  const weekendShare =
+    history.length > 0
+      ? Math.round(
+          (weekendPlays /
             history.length) *
             100
         )
@@ -407,10 +477,17 @@ for (const item of history) {
           insights={{
             topWeekday:
               topWeekday?.weekday ?? "-",
+
             topHour:
               topHour?.hour ?? 0,
+
             topArtist,
+
             topArtistShare,
+
+            listeningStyle,
+
+            weekendShare,
           }}
         />
 

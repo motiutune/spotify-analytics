@@ -1,5 +1,3 @@
-"use client";
-
 import {
   BarChart,
   Bar,
@@ -43,6 +41,8 @@ type Insights = {
   topHour: number;
   topArtist: string;
   topArtistShare: number;
+  listeningStyle: string;
+  weekendShare: number;
 };
 
 export default function AnalyticsCharts({
@@ -93,9 +93,7 @@ export default function AnalyticsCharts({
 
   return (
     <>
-      {/* -----------------------------
-          Listening Insights
-      ----------------------------- */}
+      {/* Listening Insights */}
 
       <section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <div className="mb-6">
@@ -108,8 +106,7 @@ export default function AnalyticsCharts({
           </h2>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           {/* よく聴く曜日 */}
 
           <div className="rounded-2xl bg-white/[0.04] p-5">
@@ -122,11 +119,11 @@ export default function AnalyticsCharts({
             </p>
 
             <p className="mt-2 text-sm text-zinc-400">
-              この曜日に最も多く音楽を再生しています
+              この曜日に最も多く再生しています
             </p>
           </div>
 
-          {/* よく聴く時間 */}
+          {/* よく聴く時間帯 */}
 
           <div className="rounded-2xl bg-white/[0.04] p-5">
             <p className="text-sm text-zinc-500">
@@ -162,12 +159,41 @@ export default function AnalyticsCharts({
             </p>
           </div>
 
+          {/* 再生スタイル */}
+
+          <div className="rounded-2xl bg-white/[0.04] p-5">
+            <p className="text-sm text-zinc-500">
+              再生スタイル
+            </p>
+
+            <p className="mt-2 text-3xl font-bold text-white">
+              {insights.listeningStyle}
+            </p>
+
+            <p className="mt-2 text-sm text-zinc-400">
+              再生時間帯から判定
+            </p>
+          </div>
+
+          {/* 休日再生割合 */}
+
+          <div className="rounded-2xl bg-white/[0.04] p-5">
+            <p className="text-sm text-zinc-500">
+              休日の再生割合
+            </p>
+
+            <p className="mt-2 text-3xl font-bold text-green-400">
+              {insights.weekendShare}%
+            </p>
+
+            <p className="mt-2 text-sm text-zinc-400">
+              土日に再生した割合
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* -----------------------------
-          日別再生数
-      ----------------------------- */}
+      {/* 日別再生数 */}
 
       <section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <div className="mb-6">
@@ -181,10 +207,7 @@ export default function AnalyticsCharts({
         </div>
 
         <div className="h-72">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-          >
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={dailyChartData}>
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -225,21 +248,15 @@ export default function AnalyticsCharts({
                 dataKey="play_count"
                 stroke="#22c55e"
                 strokeWidth={3}
-                dot={{
-                  r: 3,
-                }}
-                activeDot={{
-                  r: 6,
-                }}
+                dot={{ r: 3 }}
+                activeDot={{ r: 6 }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </section>
 
-      {/* -----------------------------
-          Artist Ranking
-      ----------------------------- */}
+      {/* アーティストランキング */}
 
       <section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <div className="mb-6">
@@ -253,10 +270,7 @@ export default function AnalyticsCharts({
         </div>
 
         <div className="h-96">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-          >
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={artistRanking.slice(0, 10)}
               layout="vertical"
@@ -308,9 +322,7 @@ export default function AnalyticsCharts({
         </div>
       </section>
 
-      {/* -----------------------------
-          Track Ranking
-      ----------------------------- */}
+      {/* 曲ランキング */}
 
       <section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <div className="mb-6">
@@ -357,9 +369,7 @@ export default function AnalyticsCharts({
         </div>
       </section>
 
-      {/* -----------------------------
-          曜日別再生数
-      ----------------------------- */}
+      {/* 曜日別再生数 */}
 
       <section className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <div className="mb-6">
@@ -373,10 +383,7 @@ export default function AnalyticsCharts({
         </div>
 
         <div className="h-72">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-          >
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={weekdayDist}>
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -419,9 +426,7 @@ export default function AnalyticsCharts({
         </div>
       </section>
 
-      {/* -----------------------------
-          時間帯分析
-      ----------------------------- */}
+      {/* 時間帯別分布 */}
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <div className="mb-6">
@@ -435,10 +440,7 @@ export default function AnalyticsCharts({
         </div>
 
         <div className="h-72">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-          >
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={hourlyChartData}>
               <CartesianGrid
                 strokeDasharray="3 3"
