@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { supabase } from "@/lib/supabase";
 
@@ -18,27 +19,47 @@ export default async function Dashboard() {
             Spotifyにログインしてください。
           </p>
 
-          <a
+          <Link
             href="/api/login"
             className="inline-flex items-center rounded-full bg-green-500 px-6 py-3 font-semibold text-black transition hover:bg-green-400"
           >
             Spotifyでログイン
-          </a>
+          </Link>
         </div>
       </main>
     );
   }
 
   // -----------------------------
-  // Spotifyプロフィール
+  // Spotifyプロフィール・最近聴いた曲・Top Artists・Top Tracksを並列取得
   // -----------------------------
 
-  const profileResponse = await fetch("https://api.spotify.com/v1/me", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-    cache: "no-store",
-  });
+  const [
+    profileResponse,
+    recentResponse,
+    topArtistsResponse,
+    topTracksResponse,
+  ] = await Promise.all([
+    fetch("https://api.spotify.com/v1/me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+    }),
+    fetch(
+      "https://api.spotify.com/v1/me/player/recently-played?limit=10",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+      }
+    ),
+    fetch("https://api.spotify.com/v1/me/top/artists?limit=5", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+    }),
+    fetch("https://api.spotify.com/v1/me/top/tracks?limit=5", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+    }),
+  ]);
 
   if (!profileResponse.ok) {
     return (
@@ -48,22 +69,6 @@ export default async function Dashboard() {
     );
   }
 
-  const profile = await profileResponse.json();
-
-  // -----------------------------
-  // 最近聴いた曲
-  // -----------------------------
-
-  const recentResponse = await fetch(
-    "https://api.spotify.com/v1/me/player/recently-played?limit=10",
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      cache: "no-store",
-    }
-  );
-
   if (!recentResponse.ok) {
     return (
       <main className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">
@@ -71,97 +76,6 @@ export default async function Dashboard() {
       </main>
     );
   }
-
-  const recentData = await recentResponse.json();
-
-  // -----------------------------
-  // Spotify履歴をDB保存用データに変換
-  // -----------------------------
-
-  const history = recentData.items.map((item: any) => ({
-    track_id: item.track.id,
-    track_name: item.track.name,
-    artist_name: item.track.artists
-      .map((artist: any) => artist.name)
-      .join(", "),
-    album_name: item.track.album.name,
-    album_image_url: item.track.album.images[0]?.url ?? null,
-    played_at: item.played_at,
-  }));
-
-  // -----------------------------
-  // Supabaseから既存履歴を取得
-  // -----------------------------
-
-  const { data: existingHistory, error: existingError } = await supabase
-    .from("spotify_history")
-    .select("track_id, played_at");
-
-  if (existingError) {
-    console.error("既存履歴取得エラー:", existingError);
-  }
-
-  // -----------------------------
-  // 既存データと比較
-  // -----------------------------
-
-  const existingKeys = new Set(
-    (existingHistory ?? []).map(
-      (item) => `${item.track_id}_${item.played_at}`
-    )
-  );
-
-  const newHistory = history.filter(
-    (item: any) =>
-      !existingKeys.has(`${item.track_id}_${item.played_at}`)
-  );
-
-  // -----------------------------
-  // 新しい履歴だけSupabaseへ保存
-  // -----------------------------
-
-  if (newHistory.length > 0) {
-    const { error: insertError } = await supabase
-      .from("spotify_history")
-      .insert(newHistory);
-
-    if (insertError) {
-      console.error("Supabase保存エラー:", insertError);
-    } else {
-      console.log(`${newHistory.length}件の新しい履歴を保存しました`);
-    }
-  }
-
-  // -----------------------------
-  // Supabaseから保存済み履歴を取得
-  // -----------------------------
-
-  const { data: historyData, error: historyError } = await supabase
-    .from("spotify_history")
-    .select("*")
-    .order("played_at", {
-      ascending: false,
-    });
-
-  if (historyError) {
-    console.error("履歴取得エラー:", historyError);
-  }
-
-  const totalPlays = historyData?.length ?? 0;
-
-  // -----------------------------
-  // Top Artists
-  // -----------------------------
-
-  const topArtistsResponse = await fetch(
-    "https://api.spotify.com/v1/me/top/artists?limit=5",
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      cache: "no-store",
-    }
-  );
 
   if (!topArtistsResponse.ok) {
     return (
@@ -171,22 +85,6 @@ export default async function Dashboard() {
     );
   }
 
-  const topArtistsData = await topArtistsResponse.json();
-
-  // -----------------------------
-  // Top Tracks
-  // -----------------------------
-
-  const topTracksResponse = await fetch(
-    "https://api.spotify.com/v1/me/top/tracks?limit=5",
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      cache: "no-store",
-    }
-  );
-
   if (!topTracksResponse.ok) {
     return (
       <main className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">
@@ -195,7 +93,30 @@ export default async function Dashboard() {
     );
   }
 
+  const profile = await profileResponse.json();
+  const recentData = await recentResponse.json();
+  const topArtistsData = await topArtistsResponse.json();
   const topTracksData = await topTracksResponse.json();
+
+  // -----------------------------
+  // Supabaseに蓄積された履歴件数（読み取りのみ、保存はsync APIが担当）
+  // -----------------------------
+
+  const { count: totalPlays, error: countError } = await supabase
+    .from("spotify_history")
+    .select("*", { count: "exact", head: true });
+
+  console.log("[Dashboard] totalPlays:", totalPlays);
+  console.log("[Dashboard] countError:", countError);  
+
+  if (countError) {
+    console.error("履歴件数取得エラー:", {
+      message: countError.message,
+      code: countError.code,
+      details: countError.details,
+      hint: countError.hint,
+    });
+  }
 
   // -----------------------------
   // Dashboard
@@ -216,12 +137,12 @@ export default async function Dashboard() {
           </div>
 
           <div className="flex items-center gap-3">
-            <a
+            <Link
               href="/analytics"
               className="rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-300 transition hover:bg-white/10 hover:text-white"
             >
               分析を見る
-            </a>
+            </Link>
 
             <a
               href={profile.external_urls.spotify}
@@ -260,23 +181,14 @@ export default async function Dashboard() {
         </section>
 
         {/* Analytics */}
-        <section className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Total Plays */}
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
             <p className="text-sm text-zinc-500">TOTAL PLAYS</p>
-            <p className="mt-2 text-4xl font-bold">{totalPlays}</p>
+            <p className="mt-2 text-4xl font-bold">{totalPlays ?? 0}</p>
             <p className="mt-1 text-sm text-zinc-500">
               保存されている再生履歴
             </p>
-          </div>
-
-          {/* Recent */}
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-            <p className="text-sm text-zinc-500">RECENT</p>
-            <p className="mt-2 text-4xl font-bold">
-              {recentData.items.length}
-            </p>
-            <p className="mt-1 text-sm text-zinc-500">今回取得した曲</p>
           </div>
 
           {/* Top Artist */}
